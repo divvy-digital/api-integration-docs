@@ -1,37 +1,33 @@
-## Welcome to GitHub Pages
+# Divvy webhook integration guide
 
-You can use the [editor on GitHub](https://github.com/divvy-digital/api-integration-docs/edit/gh-pages/index.md) to maintain and preview the content for your website in Markdown files.
+## Endpoint
 
-Whenever you commit to this repository, GitHub Pages will run [Jekyll](https://jekyllrb.com/) to rebuild the pages in your site, from the content in your Markdown files.
+`POST /api/v1/webhook`
 
-### Markdown
+Send product menu data in the request body as a JSON object.
 
-Markdown is a lightweight and easy-to-use syntax for styling your writing. It includes conventions for
+### Required headers
 
-```markdown
-Syntax highlighted code block
+| Header                              | Description                                                                                                                                                  |
+| ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `Authorization: Token {access key}` | Access key provided by Divvy to each integrator to authenticate requests to our service. The same access key should be used regardless of which client's data is being provided. |
+| `X-Webhook-Token: {client key}`     | Key provided by Divvy to identify which client this data is for.                                                                                        |
 
-# Header 1
-## Header 2
-### Header 3
+### Response structure
 
-- Bulleted
-- List
+Returns a JSON-encoded response with the following fields. Successful responses return HTTP status 200, while errors use 400 or greater.
 
-1. Numbered
-2. List
+| Name              | Type      | Description                                                                                                                                            |
+| ----------------- | --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `success`         | `boolean` | `true` if the client's data was received and no errors occurred, `false` otherwise. If `false`, `error` will contain a description of what went wrong. |
+| `error`           | `string`  | A description of the error that occurred, if any.                                                                                                      |
+| `last_used`       | `string`  | Time this client's data was last used by our system. ISO 8601 formatted datetime string.                                                               |
+| `next_push_after` | `string`  | Time after which our system expects the next update for this client. ISO 8601 formatted datetime string.                                               |
 
-**Bold** and _Italic_ and `Code` text
+### Error messages
 
-[Link](url) and ![Image](src)
-```
-
-For more details see [GitHub Flavored Markdown](https://guides.github.com/features/mastering-markdown/).
-
-### Jekyll Themes
-
-Your Pages site will use the layout and styles from the Jekyll theme you have selected in your [repository settings](https://github.com/divvy-digital/api-integration-docs/settings). The name of this theme is saved in the Jekyll `_config.yml` configuration file.
-
-### Support or Contact
-
-Having trouble with Pages? Check out our [documentation](https://docs.github.com/categories/github-pages-basics/) or [contact support](https://support.github.com/contact) and we’ll help you sort it out.
+| HTTP Response Code | Message                                               | Explanation                                                                                                                                                                        |
+| ------------------ | ----------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 400                | `next push not allowed until after <datetime>`        | Returned when this endpoint is called again before `next_push_after` from the previous call for this client. `<date-time>` will be the `next_push_after` ISO 8601 datetime string. |
+| 400                | `must supply webhook token in X-Webhook-Token header` | Returned when the request is missing the client key in the `X-Webhook-Token` header.                                                                                               |
+| 403                | `not authorized`                                      | Returned when the request is missing the access key in the `Authorization` header.                                                                                                 |
